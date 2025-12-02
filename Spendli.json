@@ -1,0 +1,1531 @@
+{
+  "name": "Spendli",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/u/0/folders/1XmfNctZgahTlkDhrwyJ4jbebSpi8mG-L",
+          "mode": "url"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2064,
+        -1072
+      ],
+      "id": "ad437a2d-6633-4ed6-a35b-06f4538bb011",
+      "name": "Watches specific folder for image uploads",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Z2S3B0Rqe33Axvv",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1840,
+        -1072
+      ],
+      "id": "fd346bcf-26a0-4c1d-9039-e7bb5e04c962",
+      "name": "Gets the uploaded image",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Z2S3B0Rqe33Axvv",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "68e71e92-781a-4bd7-bc3d-9230aa964b53",
+              "name": "file_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1792,
+        -864
+      ],
+      "id": "ae00a159-2aa0-4330-8622-9c70d1be8d82",
+      "name": "Extracts uploaded file id"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "You are an extraction agent. Extract ONLY the information that is clearly visible on the provided receipt image. \nDo NOT guess or infer missing values. If any field is missing, unclear, or not present, return null for that field.\n\nYour job is to classify the receipt type automatically and extract the correct fields based on the rules below.\n\n────────────────────────────\nRECEIPT TYPE RULES\n────────────────────────────\n\nThere are 3 main categories of receipts:\n\n1. UPI PAYMENT SCREENSHOTS (PhonePe, Google Pay, Paytm, BHIM, Cred, Amazon Pay, BharatPe, Slice, etc.)\n2. PAPER BILLS (supermarket, restaurant, petrol pump, pharmacy, POS thermal receipts, handwritten bills)\n3. SERVICE / DIGITAL RECEIPTS (Rapido, Uber, Zomato, Swiggy, Flipkart, courier, online payments, etc.)\n\nExtract based on these rules:\n\n────────────────────────────\nEXTRACTION RULES\n────────────────────────────\n\n1. date_time\n   - For digital/UPI receipts: extract EXACT date and time as shown.\n   - For paper bills: extract date only (if no time is present, return only the date). \n   - Do not reformat the date or time; return them exactly as printed.\n\n2. receiver_name  \n   - UPI receipts: name of the receiving person/business.\n   - Paper bills: shop/business name.\n   - Service receipts: merchant or service provider name.\n\n3. receiver_id  \n   Meaning changes based on receipt type:\n   - UPI receipts → receiver UPI ID / VPA / phone number.\n   - Paper bills → business/shop phone number (if present), otherwise null.\n   - Service receipts → customer/merchant ID if available (phone, email, order ID). If not present, return null.\n\n4. transaction_id \n   - UPI receipts → extract UTR / RRN (must be 12–14 digits, purely numeric).\n   - Paper bills → extract GST number (alphanumeric, typically 15 characters).\n   - Service receipts → extract any reference/invoice/order number if available.  \n   - Any other type of payment → extract transaction related id\n\n   - If none found → null.\n\n5. amount \n   - HIGHEST PRIORITY FIELD.\n   - Extract only the numeric value.\n   - Strip currency symbols (₹, INR, Rs).\n   - If multiple amounts exist, choose the final payable/paid amount.\n   - Ignore commas (,) in number\n\n\n6. payer_info  \nBank account number is the first priority. It exists either as with XXX and last few digits or with bank name and last few digits or with XXX+bank name+ last few digits. If you found any bank name and last  few digits of account number, Return that number.\n\n   - UPI receipts:\n       - Extract sender bank account number. \n       - If not available, extract sender’s name.\n   - Paper bills:\n       - Usually no bank info → return name. \n   - Service receipts:\n       - If payer name/phone/email appears, return it.\n       - Otherwise null.\n\n────────────────────────────\nABSOLUTE RULES\n────────────────────────────\n- Never guess or invent values.\n- If a field does not appear visually on the image, return null.\n- For UTR: MUST be purely numeric and 12–14 digits. If not found, return null.\n- For GST: extract only if clearly labeled as GST or matches GSTIN format.\n- Output MUST not contain any other explanations or any other unnecessary details.\n-  For payer_info field, Bank account number (Last few digits) is the top most priority. Return name only if that number doesn't exist.",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        -1072
+      ],
+      "id": "9ffe9e73-53a7-49af-b0f9-0ddf0efa87b7",
+      "name": "Extracts required details with defined rule set",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3ajxiKfYSzcyRhHp",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1392,
+        -1056
+      ],
+      "id": "e83da3e2-1c63-4e37-970d-c370e7c4954d",
+      "name": "Merges image data and file id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get raw text returned by AI node\nlet raw = $json.content?.parts?.[0]?.text || \"\";\n\n// Clean wrapper formatting\nraw = raw\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .replace(/'''json/g, \"\")\n  .replace(/'''/g, \"\")\n  .trim();\n\n// Parse the cleaned JSON\nlet data = {};\ntry {\n  data = JSON.parse(raw);\n} catch (e) {\n  data = {};\n}\n\n// Return clean structured values\nreturn {\n  date_time: data.date_time ?? null,\n  receiver_name: data.receiver_name ?? null,\n  receiver_id: data.receiver_id ?? null,\n  transaction_id: data.transaction_id ?? null,\n  amount:data.amount??null,\n  payer_info: data.payer_info ?? null,\n  file_id: $input.first().json.file_id\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1168,
+        -1056
+      ],
+      "id": "8487f014-1f4d-431f-a135-a878bcf0955f",
+      "name": "Cleans data and assigns multiple variables"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ef0998d-e543-418e-8f0b-64065b775229",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "Albert",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "8c2d8c90-45bc-4ae6-9b0a-dcfabe0defaa",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "23",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            },
+            {
+              "id": "9ea34ad7-9d66-4b7c-9000-82b2462df5da",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "44",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        -1248
+      ],
+      "id": "79ae532a-7fbe-43a9-bf16-b41188d927cf",
+      "name": "Checks payer_info condition"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ef0998d-e543-418e-8f0b-64065b775229",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "James",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "8c2d8c90-45bc-4ae6-9b0a-dcfabe0defaa",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "47",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            },
+            {
+              "id": "9ea34ad7-9d66-4b7c-9000-82b2462df5da",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "24",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        -1056
+      ],
+      "id": "cd56e5cc-7fe3-4016-8072-6cf18de21570",
+      "name": "Checks payer_info condition1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ef0998d-e543-418e-8f0b-64065b775229",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "Peter",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "8c2d8c90-45bc-4ae6-9b0a-dcfabe0defaa",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "34",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            },
+            {
+              "id": "9ea34ad7-9d66-4b7c-9000-82b2462df5da",
+              "leftValue": "={{ $json.payer_info }}",
+              "rightValue": "90",
+              "operator": {
+                "type": "string",
+                "operation": "endsWith"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        -800
+      ],
+      "id": "95ac6541-1a30-4012-92d9-48166189e6fb",
+      "name": "Checks payer_info condition2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 531590654,
+          "mode": "list",
+          "cachedResultName": "Albert",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=531590654"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date & Time": "={{ $json.date_time }}",
+            "Receiver Name": "={{ $json.receiver_name }}",
+            "Receiver Id                        (UPI, Mobile, Wallet, etc)": "={{ $json.receiver_id }}",
+            "Transaction id              (UTR, GST, etc)": "={{ $json.transaction_id }}",
+            "Amount (₹)": "={{ $json.amount }}"
+          },
+          "matchingColumns": [
+            "Date/Time"
+          ],
+          "schema": [
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receiver Name",
+              "displayName": "Receiver Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receiver Id                        (UPI, Mobile, Wallet, etc)",
+              "displayName": "Receiver Id                        (UPI, Mobile, Wallet, etc)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Transaction id              (UTR, GST, etc)",
+              "displayName": "Transaction id              (UTR, GST, etc)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount (₹)",
+              "displayName": "Amount (₹)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -496,
+        -1488
+      ],
+      "id": "26c1fbf7-ee0f-44f2-be61-12989541f1e4",
+      "name": "Creates new now in respective sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1165169231,
+          "mode": "list",
+          "cachedResultName": "James",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=1165169231"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date & Time": "={{ $json.date_time }}",
+            "Receiver Name": "={{ $json.receiver_name }}",
+            "Receiver Id                        (UPI, Mobile, Wallet, etc)": "={{ $json.receiver_id }}",
+            "Transaction id              (UTR, GST, etc)": "={{ $json.transaction_id }}",
+            "Amount (₹)": "={{ $json.amount }}"
+          },
+          "matchingColumns": [
+            "Date/Time"
+          ],
+          "schema": [
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receiver Name",
+              "displayName": "Receiver Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receiver Id                        (UPI, Mobile, Wallet, etc)",
+              "displayName": "Receiver Id                        (UPI, Mobile, Wallet, etc)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Transaction id              (UTR, GST, etc)",
+              "displayName": "Transaction id              (UTR, GST, etc)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount (₹)",
+              "displayName": "Amount (₹)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -208,
+        -1072
+      ],
+      "id": "f6b95c25-2be5-4fbc-91c4-5d298540e3c7",
+      "name": "Creates new now in respective sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 357713431,
+          "mode": "list",
+          "cachedResultName": "Peter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=357713431"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date & Time": "={{ $json.date_time }}",
+            "Receiver Name": "={{ $json.receiver_name }}",
+            "Receiver Id                        (UPI, Mobile, Wallet, etc)": "={{ $json.receiver_id }}",
+            "Transaction id              (UTR, GST, etc)": "={{ $json.transaction_id }}",
+            "Amount (₹)": "={{ $json.amount }}"
+          },
+          "matchingColumns": [
+            "Date/Time"
+          ],
+          "schema": [
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receiver Name",
+              "displayName": "Receiver Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receiver Id                        (UPI, Mobile, Wallet, etc)",
+              "displayName": "Receiver Id                        (UPI, Mobile, Wallet, etc)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Transaction id              (UTR, GST, etc)",
+              "displayName": "Transaction id              (UTR, GST, etc)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount (₹)",
+              "displayName": "Amount (₹)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -496,
+        -816
+      ],
+      "id": "21dc47db-d991-436b-933c-a14a87b8c12a",
+      "name": "Creates new now in respective sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.file_id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "14trqw1cFG_jlDjHQmY8vU9pCsZyPVw-O",
+          "mode": "list",
+          "cachedResultName": "Albert",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/14trqw1cFG_jlDjHQmY8vU9pCsZyPVw-O"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -496,
+        -1264
+      ],
+      "id": "52d87d74-daa3-453b-9077-cf40f888c22f",
+      "name": "Moves uploaded image to respective folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Z2S3B0Rqe33Axvv",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.file_id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1pubHdpqEwr0dAiJDSutloW8LB5EPxV7a",
+          "mode": "list",
+          "cachedResultName": "James",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1pubHdpqEwr0dAiJDSutloW8LB5EPxV7a"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -208,
+        -896
+      ],
+      "id": "165b91b4-4961-4cbf-9da5-564ce3942a38",
+      "name": "Moves uploaded image to respective folder1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Z2S3B0Rqe33Axvv",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.file_id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "18UWxahYfG7In4zAe-b_3NKiCwG8WVT86",
+          "mode": "list",
+          "cachedResultName": "Peter",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/18UWxahYfG7In4zAe-b_3NKiCwG8WVT86"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -496,
+        -624
+      ],
+      "id": "ced47f41-9e55-48b2-805f-198a4f7a630a",
+      "name": "Moves uploaded image to respective folder2",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Z2S3B0Rqe33Axvv",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2064,
+        -416
+      ],
+      "id": "c8057182-1bea-4bfc-9d02-3fc8e428c1b8",
+      "name": "Daily notifier"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1858229028,
+          "mode": "list",
+          "cachedResultName": "Grand Total",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=1858229028"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1840,
+        -416
+      ],
+      "id": "991c67cd-a126-44af-baad-759496cce3d0",
+      "name": "Gets 'Grand total' sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items from previous node\nconst items = $input.all();\n\n// Extract rows in order\nconst [row1, row2, row3, row4] = items;\n\n// Helper function for Indian number format\nfunction formatIndian(num) {\n  if (num === undefined || num === null || num === \"\") return \"0\";\n  return Number(num).toLocaleString(\"en-IN\");\n}\n\n// Assign totals using the correct column name\nconst total1 = formatIndian(row1.json[\"Total (₹)\"]);\nconst total2 = formatIndian(row2.json[\"Total (₹)\"]);\nconst total3 = formatIndian(row3.json[\"Total (₹)\"]);\nconst grandTotal = formatIndian(row4.json[\"Total (₹)\"]);\n\n// Return values as separate outputs\nreturn [\n  {\n    json: {\n      Total1: total1,\n      Total2: total2,\n      Total3: total3,\n      GrandTotal: grandTotal\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        -416
+      ],
+      "id": "54ee2925-3e93-490f-9fbd-d6575ef9fbfc",
+      "name": "Structures data by assigning variables and removing unnecessary parameters"
+    },
+    {
+      "parameters": {
+        "chatId": "7656834354",
+        "text": "=🧾 Expenses as of today\n───────────────────────────\n\n👤 Albert : ₹{{ $json.Total1 }}/-\n\n👤 James  : ₹{{ $json.Total2 }}/-\n\n👤 Peter  : ₹{{ $json.Total3 }}/-\n\n───────────────────────────\n💰 **Total : ₹{{ $json.GrandTotal }}/-**",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1392,
+        -416
+      ],
+      "id": "3b9c1f9c-6d52-43d2-9538-b4f2f0849e9d",
+      "name": "Sends daily notifiction",
+      "webhookId": "485166c7-4145-46bc-b3da-03d724fb4e69",
+      "credentials": {
+        "telegramApi": {
+          "id": "JqL6MwIbZkHuaZ91",
+          "name": "Spendli"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2112,
+        368
+      ],
+      "id": "07fd5037-f8a1-40c5-bfa8-94a13b573842",
+      "name": "Monthly notifier"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1858229028,
+          "mode": "list",
+          "cachedResultName": "Grand Total",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=1858229028"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1792,
+        -16
+      ],
+      "id": "60cc5f89-0a15-40d9-8c34-75709aba7c2a",
+      "name": "Gets 'Grand total' sheet data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 531590654,
+          "mode": "list",
+          "cachedResultName": "Albert",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=531590654"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1792,
+        176
+      ],
+      "id": "bea8277f-41ae-465b-8df7-0c805923cbe0",
+      "name": "Gets first person sheet data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1165169231,
+          "mode": "list",
+          "cachedResultName": "James",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=1165169231"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1792,
+        368
+      ],
+      "id": "b06fa0bc-6c33-4ad4-8d68-0887c695b9bd",
+      "name": "Gets second person sheet data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw",
+          "mode": "list",
+          "cachedResultName": "Spendli",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 357713431,
+          "mode": "list",
+          "cachedResultName": "Peter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=357713431"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1792,
+        560
+      ],
+      "id": "c7ffbb46-da96-477b-a7e4-ab1ca687e32b",
+      "name": "Gets third person sheet data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\n// No rows? Return blank html\nif (!rows || rows.length === 0) {\n  return [{ json: { html2: \"<html><body>No data</body></html>\" } }];\n}\n\n// Helper → Indian currency formatting\nfunction formatIndianCurrency(value) {\n  if (value === null || value === undefined) return \"\";\n  \n  let str = String(value).trim();\n\n  // If already formatted with ₹ or /-, don't double format\n  if (str.includes(\"₹\") || str.endsWith(\"/-\")) {\n    return str;\n  }\n\n  // Extract numeric part only\n  const numeric = str.replace(/[^\\d.-]/g, \"\");\n  if (numeric === \"\" || isNaN(Number(numeric))) return str;\n\n  const num = Number(numeric);\n\n  const formatted = new Intl.NumberFormat(\"en-IN\").format(num);\n  return `₹${formatted}/-`;\n}\n\n// Get headers but skip first key (row_number)\nconst allKeys = Object.keys(rows[0].json || {});\nconst keys = allKeys.slice(1);\n\n// Columns that need currency formatting\nconst amountColumns = [\n  \"Amount (₹)\",\n  \"Total (₹)\",\n  \"Grand total (₹)\"\n].map(s => s.toLowerCase());\n\n// Build table rows\nconst tableRows = rows.map(r => {\n  const cells = keys.map(k => {\n    let value = r.json[k];\n    const keyNormalized = k.trim().toLowerCase();\n\n    // Apply currency formatting for matching columns\n    if (amountColumns.includes(keyNormalized)) {\n      value = formatIndianCurrency(value);\n    }\n\n    // Escape HTML for safety\n    const safeValue = String(value ?? \"\")\n      .replace(/&/g, \"&amp;\")\n      .replace(/</g, \"&lt;\")\n      .replace(/>/g, \"&gt;\");\n\n    return `<td>${safeValue}</td>`;\n  }).join(\"\");\n\n  return `<tr>${cells}</tr>`;\n}).join(\"\");\n\n// Build header HTML\nconst headerHtml = keys.map(k => `<th>${k}</th>`).join(\"\");\n\n// Final HTML output\nconst html1 = `\n<html>\n<head>\n  <meta charset=\"utf-8\" />\n  <style>\n    body { font-family: Arial, sans-serif; padding: 16px; }\n    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }\n    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }\n    th { background: #f3f3f3; }\n  </style>\n</head>\n<body>\n  <h2>Total expenses</h2>\n  <table>\n    <thead><tr>${headerHtml}</tr></thead>\n    <tbody>${tableRows}</tbody>\n  </table>\n</body>\n</html>\n`;\n\nreturn [{ json: { html1 } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        -16
+      ],
+      "id": "ab085c23-6f0a-4150-8ea0-33513ce3db89",
+      "name": "Converts data from JSON to HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\n// No rows? Return blank html\nif (!rows || rows.length === 0) {\n  return [{ json: { html2: \"<html><body>No data</body></html>\" } }];\n}\n\n// Helper → Indian currency formatting\nfunction formatIndianCurrency(value) {\n  if (value === null || value === undefined) return \"\";\n  \n  let str = String(value).trim();\n\n  // If already formatted with ₹ or /-, don't double format\n  if (str.includes(\"₹\") || str.endsWith(\"/-\")) {\n    return str;\n  }\n\n  // Extract numeric part only\n  const numeric = str.replace(/[^\\d.-]/g, \"\");\n  if (numeric === \"\" || isNaN(Number(numeric))) return str;\n\n  const num = Number(numeric);\n\n  const formatted = new Intl.NumberFormat(\"en-IN\").format(num);\n  return `₹${formatted}/-`;\n}\n\n// Get headers but skip first key (row_number)\nconst allKeys = Object.keys(rows[0].json || {});\nconst keys = allKeys.slice(1);\n\n// Columns that need currency formatting\nconst amountColumns = [\n  \"Amount (₹)\",\n  \"Total (₹)\",\n  \"Grand total (₹)\"\n].map(s => s.toLowerCase());\n\n// Build table rows\nconst tableRows = rows.map(r => {\n  const cells = keys.map(k => {\n    let value = r.json[k];\n    const keyNormalized = k.trim().toLowerCase();\n\n    // Apply currency formatting for matching columns\n    if (amountColumns.includes(keyNormalized)) {\n      value = formatIndianCurrency(value);\n    }\n\n    // Escape HTML for safety\n    const safeValue = String(value ?? \"\")\n      .replace(/&/g, \"&amp;\")\n      .replace(/</g, \"&lt;\")\n      .replace(/>/g, \"&gt;\");\n\n    return `<td>${safeValue}</td>`;\n  }).join(\"\");\n\n  return `<tr>${cells}</tr>`;\n}).join(\"\");\n\n// Build header HTML\nconst headerHtml = keys.map(k => `<th>${k}</th>`).join(\"\");\n\n// Final HTML output\nconst html2 = `\n<html>\n<head>\n  <meta charset=\"utf-8\" />\n  <style>\n    body { font-family: Arial, sans-serif; padding: 16px; }\n    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }\n    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }\n    th { background: #f3f3f3; }\n  </style>\n</head>\n<body>\n  <h2>Albert expenses</h2>\n  <table>\n    <thead><tr>${headerHtml}</tr></thead>\n    <tbody>${tableRows}</tbody>\n  </table>\n</body>\n</html>\n`;\n\nreturn [{ json: { html2 } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        176
+      ],
+      "id": "18be65bd-6729-4cff-b653-af6b6d25c658",
+      "name": "Converts data from JSON to HTML1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\n// No rows? Return blank html\nif (!rows || rows.length === 0) {\n  return [{ json: { html3: \"<html><body>No data</body></html>\" } }];\n}\n\n// Helper → Indian currency formatting\nfunction formatIndianCurrency(value) {\n  if (value === null || value === undefined) return \"\";\n  \n  let str = String(value).trim();\n\n  // If already formatted with ₹ or /-, don't double format\n  if (str.includes(\"₹\") || str.endsWith(\"/-\")) {\n    return str;\n  }\n\n  // Extract numeric part only\n  const numeric = str.replace(/[^\\d.-]/g, \"\");\n  if (numeric === \"\" || isNaN(Number(numeric))) return str;\n\n  const num = Number(numeric);\n\n  const formatted = new Intl.NumberFormat(\"en-IN\").format(num);\n  return `₹${formatted}/-`;\n}\n\n// Get headers but skip first key (row_number)\nconst allKeys = Object.keys(rows[0].json || {});\nconst keys = allKeys.slice(1);\n\n// Columns that need currency formatting\nconst amountColumns = [\n  \"Amount (₹)\",\n  \"Total (₹)\",\n  \"Grand total (₹)\"\n].map(s => s.toLowerCase());\n\n// Build table rows\nconst tableRows = rows.map(r => {\n  const cells = keys.map(k => {\n    let value = r.json[k];\n    const keyNormalized = k.trim().toLowerCase();\n\n    // Apply currency formatting for matching columns\n    if (amountColumns.includes(keyNormalized)) {\n      value = formatIndianCurrency(value);\n    }\n\n    // Escape HTML for safety\n    const safeValue = String(value ?? \"\")\n      .replace(/&/g, \"&amp;\")\n      .replace(/</g, \"&lt;\")\n      .replace(/>/g, \"&gt;\");\n\n    return `<td>${safeValue}</td>`;\n  }).join(\"\");\n\n  return `<tr>${cells}</tr>`;\n}).join(\"\");\n\n// Build header HTML\nconst headerHtml = keys.map(k => `<th>${k}</th>`).join(\"\");\n\n// Final HTML output\nconst html3 = `\n<html>\n<head>\n  <meta charset=\"utf-8\" />\n  <style>\n    body { font-family: Arial, sans-serif; padding: 16px; }\n    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }\n    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }\n    th { background: #f3f3f3; }\n  </style>\n</head>\n<body>\n  <h2>James expenses</h2>\n  <table>\n    <thead><tr>${headerHtml}</tr></thead>\n    <tbody>${tableRows}</tbody>\n  </table>\n</body>\n</html>\n`;\n\nreturn [{ json: { html3 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        368
+      ],
+      "id": "74b7e776-aecd-4ccc-8e50-86679cbd61ef",
+      "name": "Converts data from JSON to HTML2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\n// No rows? Return blank html\nif (!rows || rows.length === 0) {\n  return [{ json: { html4: \"<html><body>No data</body></html>\" } }];\n}\n\n// Helper → Indian currency formatting\nfunction formatIndianCurrency(value) {\n  if (value === null || value === undefined) return \"\";\n  \n  let str = String(value).trim();\n\n  // If already formatted with ₹ or /-, don't double format\n  if (str.includes(\"₹\") || str.endsWith(\"/-\")) {\n    return str;\n  }\n\n  // Extract numeric part only\n  const numeric = str.replace(/[^\\d.-]/g, \"\");\n  if (numeric === \"\" || isNaN(Number(numeric))) return str;\n\n  const num = Number(numeric);\n\n  const formatted = new Intl.NumberFormat(\"en-IN\").format(num);\n  return `₹${formatted}/-`;\n}\n\n// Get headers but skip first key (row_number)\nconst allKeys = Object.keys(rows[0].json || {});\nconst keys = allKeys.slice(1);\n\n// Columns that need currency formatting\nconst amountColumns = [\n  \"Amount (₹)\",\n  \"Total (₹)\",\n  \"Grand total (₹)\"\n].map(s => s.toLowerCase());\n\n// Build table rows\nconst tableRows = rows.map(r => {\n  const cells = keys.map(k => {\n    let value = r.json[k];\n    const keyNormalized = k.trim().toLowerCase();\n\n    // Apply currency formatting for matching columns\n    if (amountColumns.includes(keyNormalized)) {\n      value = formatIndianCurrency(value);\n    }\n\n    // Escape HTML for safety\n    const safeValue = String(value ?? \"\")\n      .replace(/&/g, \"&amp;\")\n      .replace(/</g, \"&lt;\")\n      .replace(/>/g, \"&gt;\");\n\n    return `<td>${safeValue}</td>`;\n  }).join(\"\");\n\n  return `<tr>${cells}</tr>`;\n}).join(\"\");\n\n// Build header HTML\nconst headerHtml = keys.map(k => `<th>${k}</th>`).join(\"\");\n\n// Final HTML output\nconst html4 = `\n<html>\n<head>\n  <meta charset=\"utf-8\" />\n  <style>\n    body { font-family: Arial, sans-serif; padding: 16px; }\n    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }\n    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }\n    th { background: #f3f3f3; }\n  </style>\n</head>\n<body>\n  <h2>Peter expenses</h2>\n  <table>\n    <thead><tr>${headerHtml}</tr></thead>\n    <tbody>${tableRows}</tbody>\n  </table>\n</body>\n</html>\n`;\n\nreturn [{ json: { html4 } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1568,
+        560
+      ],
+      "id": "278607d6-323a-4bba-b27e-6e7c3cbd4565",
+      "name": "Converts data from JSON to HTML3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1216,
+        320
+      ],
+      "id": "b5243951-9a91-4e5e-80be-fd2350523142",
+      "name": "Merges all html data"
+    },
+    {
+      "parameters": {
+        "sendTo": "gopichandt22@gmail.com",
+        "subject": "=Spendli Expense Report - {{ $now.minus({ months: 1 }).format(\"MMMM yyyy\") }}",
+        "message": "={{ $json.html1 }}\n{{ $json.html2 }}\n{{ $json.html3 }}\n{{ $json.html4 }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -992,
+        352
+      ],
+      "id": "06f539b4-1fd8-4d26-b877-8f1dc4f58c2c",
+      "name": "Sends html table mail",
+      "webhookId": "487c3052-a1ff-4f65-b30e-35e4ab9fc7b5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sXMA7mKlasqwNU4n",
+          "name": "Gmail-tlr"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/export?format=xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -800,
+        352
+      ],
+      "id": "df16e179-b386-4603-b2cc-5134996903d9",
+      "name": "Gets the Google sheet"
+    },
+    {
+      "parameters": {
+        "name": "={{ $now.minus({ months: 1 }).format(\"MMMM yyyy\") }} - Spendli Expense Report",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "12WPTtI_2r2M94fYateLrNIFFvkfAKhz7",
+          "mode": "list",
+          "cachedResultName": "Data_Backup",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/12WPTtI_2r2M94fYateLrNIFFvkfAKhz7"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -576,
+        352
+      ],
+      "id": "1950b2c9-600d-4433-a5e6-13983c038cd4",
+      "name": "Uploads in respective folder as a backup",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9Z2S3B0Rqe33Axvv",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?gid=1858229028#gid=1858229028",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 531590654,
+          "mode": "list",
+          "cachedResultName": "Albert",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=531590654"
+        },
+        "keepFirstRow": true
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        176
+      ],
+      "id": "4a1958e0-57d0-41ea-9f98-33534797bc54",
+      "name": "Resets first person's sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?gid=1858229028#gid=1858229028",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1165169231,
+          "mode": "list",
+          "cachedResultName": "James",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=1165169231"
+        },
+        "keepFirstRow": true
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        352
+      ],
+      "id": "1961daf5-7ac1-472c-826e-36ab97759640",
+      "name": "Resets second person's sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit?gid=1858229028#gid=1858229028",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 357713431,
+          "mode": "list",
+          "cachedResultName": "Peter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1znd_DQG39ZpM0cQv8zfV67EQl9OkTMXj3MGfORF67uw/edit#gid=357713431"
+        },
+        "keepFirstRow": true
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        528
+      ],
+      "id": "190ec664-2a8f-43af-b683-01daa407822a",
+      "name": "Resets third person's sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1O6G4HpsSjS981AX",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Watches specific folder for image uploads": {
+      "main": [
+        [
+          {
+            "node": "Gets the uploaded image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extracts uploaded file id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets the uploaded image": {
+      "main": [
+        [
+          {
+            "node": "Extracts required details with defined rule set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracts uploaded file id": {
+      "main": [
+        [
+          {
+            "node": "Merges image data and file id",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Extracts required details with defined rule set": {
+      "main": [
+        [
+          {
+            "node": "Merges image data and file id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges image data and file id": {
+      "main": [
+        [
+          {
+            "node": "Cleans data and assigns multiple variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleans data and assigns multiple variables": {
+      "main": [
+        [
+          {
+            "node": "Checks payer_info condition",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Checks payer_info condition1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Checks payer_info condition2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks payer_info condition": {
+      "main": [
+        [
+          {
+            "node": "Moves uploaded image to respective folder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Creates new now in respective sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Checks payer_info condition1": {
+      "main": [
+        [
+          {
+            "node": "Moves uploaded image to respective folder1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Creates new now in respective sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks payer_info condition2": {
+      "main": [
+        [
+          {
+            "node": "Moves uploaded image to respective folder2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Creates new now in respective sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily notifier": {
+      "main": [
+        [
+          {
+            "node": "Gets 'Grand total' sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets 'Grand total' sheet": {
+      "main": [
+        [
+          {
+            "node": "Structures data by assigning variables and removing unnecessary parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structures data by assigning variables and removing unnecessary parameters": {
+      "main": [
+        [
+          {
+            "node": "Sends daily notifiction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monthly notifier": {
+      "main": [
+        [
+          {
+            "node": "Gets first person sheet data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gets second person sheet data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gets third person sheet data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gets 'Grand total' sheet data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets 'Grand total' sheet data": {
+      "main": [
+        [
+          {
+            "node": "Converts data from JSON to HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets first person sheet data": {
+      "main": [
+        [
+          {
+            "node": "Converts data from JSON to HTML1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets second person sheet data": {
+      "main": [
+        [
+          {
+            "node": "Converts data from JSON to HTML2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets third person sheet data": {
+      "main": [
+        [
+          {
+            "node": "Converts data from JSON to HTML3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converts data from JSON to HTML": {
+      "main": [
+        [
+          {
+            "node": "Merges all html data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converts data from JSON to HTML1": {
+      "main": [
+        [
+          {
+            "node": "Merges all html data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Converts data from JSON to HTML2": {
+      "main": [
+        [
+          {
+            "node": "Merges all html data",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Converts data from JSON to HTML3": {
+      "main": [
+        [
+          {
+            "node": "Merges all html data",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merges all html data": {
+      "main": [
+        [
+          {
+            "node": "Sends html table mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sends html table mail": {
+      "main": [
+        [
+          {
+            "node": "Gets the Google sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets the Google sheet": {
+      "main": [
+        [
+          {
+            "node": "Uploads in respective folder as a backup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Uploads in respective folder as a backup": {
+      "main": [
+        [
+          {
+            "node": "Resets first person's sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Resets second person's sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Resets third person's sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a14a089a-52af-42ff-91ea-97aa61ade357",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "10b66986b1d846fb53601d0ae412e7dd2404714bee9930993b8360995658001c"
+  },
+  "id": "odeQdVIH9auLXu9V",
+  "tags": []
+}

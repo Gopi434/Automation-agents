@@ -1,0 +1,399 @@
+{
+  "name": "QRL",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        448,
+        464
+      ],
+      "id": "b73abd5f-390e-4f3d-b6f6-26dc2117b33b",
+      "name": "Checks Incoming messages",
+      "webhookId": "3a46177e-5f1b-494e-a755-5c8deb770cfb",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "4smq1F1xgNmLVENh",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "50e5cce0-d1a2-4345-88d3-5573dc99e077",
+              "leftValue": "={{ $json.messages[0].text.body }}",
+              "rightValue": "^-?\\d*\\.?\\d+$",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        464
+      ],
+      "id": "8542ff76-088d-4fea-9b48-099d8e751005",
+      "name": "Detects if it is photo or text"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].image.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        448
+      ],
+      "id": "93dbb21c-73e9-4f56-85f2-a1182a54e763",
+      "name": "Grabs photo url from file id",
+      "webhookId": "3238e1dc-538c-4175-a1cd-d24f3a755846",
+      "alwaysOutputData": false,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "q4azUTbXMzA1jdij",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer EAAa3Qasd2pIBQC9KNd4CO3ZAN4yteVJZCvN00VPeHoS9llwQyv8eb5IIGnzndXO4uIcIu4aTP2nyy660itZAS8JqVIHw7gR8jWteU6918tV31CJ2RKTfnhkZAKAmJgrrySn5ZAZA6QkJYfZCoLsEmxChkZB702aTrhVmZBZBZCWkRIoY2X0lZCsHSXcaBY4zZCQzQyPTz9wZDZD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        448
+      ],
+      "id": "3e09ed33-783e-4d9c-881b-e2b1bf054554",
+      "name": "Pulls the binary file from url"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash"
+        },
+        "text": "You are given an image containing a UPI QR code.\nYour ONLY task is to extract the exact UPI payment URI encoded in the QR code.\nReturn the data in the following strict format with no additional text, no brackets, and no spaces:\nupi://pay?pa=<value>\n\nRules:\n\nDo NOT generate explanations, comments, or filler text.\n\nDo NOT guess. If the QR cannot be decoded, return exactly: ERROR_CANNOT_DECODE.\n\nOutput must contain ONLY the UPI URI string as encoded in the QR code.\n\nDo NOT modify, fix, or reorder parameters. Return the URI exactly as-is.",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        448
+      ],
+      "id": "2853417a-088a-494f-9870-b31edc601d6f",
+      "name": "Decodes QR code in defined format and rules",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3ajxiKfYSzcyRhHp",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Raw input coming from previous node\nlet raw = $input.first().json.content.parts[0].text;    // example: \"upi://pay?pa=8977049065@ptyes\\n\"\n\n// 1. Convert safely to string\nlet str = String(raw);\n\n// 2. Remove newlines, tabs, carriage returns\nstr = str.replace(/[\\n\\r\\t]/g, \"\");\n\n// 3. Remove invisible Unicode characters\nstr = str.replace(/[\\u200B-\\u200D\\uFEFF]/g, \"\");\n\n// 4. Trim spaces at start/end\nstr = str.trim();\n\n// 5. Remove unwanted spaces inside the string\nstr = str.replace(/\\s+/g, \"\");\n\n// 6. Remove trailing commas (common AI artifact)\nstr = str.replace(/,+$/, \"\");\n\n// 7. Remove wrapping quotes if present\nstr = str.replace(/^\"(.*)\"$/, \"$1\");\n\n// Output clean data\nreturn {\n  cleanText: str\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        448
+      ],
+      "id": "dddf8822-bf01-43b8-97b1-a697d0b1cbf6",
+      "name": "Cleans the data"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "870366209493755",
+        "recipientPhoneNumber": "+91 7013691121",
+        "textBody": "=Here’s your payment link 👇\n{{ $json.cleanText }}\n\nYou can enter custom amounts also.",
+        "additionalFields": {
+          "previewUrl": true
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2176,
+        448
+      ],
+      "id": "5ed07ccc-f784-4311-b20c-8bc4d97b73bd",
+      "name": "Sends direct payment link",
+      "webhookId": "d4c0aadd-bfac-4581-82c9-24840d840d69",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "q4azUTbXMzA1jdij",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "QRL",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "gt",
+              "keyValue": "0"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Payee",
+              "fieldValue": "={{ $json.cleanText }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        672
+      ],
+      "id": "14ad65a2-40e4-4429-9523-75133577cb74",
+      "name": "Stores link data in a table",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "QRL",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "34"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        992,
+        800
+      ],
+      "id": "7586f1bb-bc65-472e-a001-75556cbb0a94",
+      "name": "Gets previously stored link ",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1264,
+        784
+      ],
+      "id": "6f2adaa0-2995-46b1-bc78-f0548a4b8b67",
+      "name": "Merges link and entered amount"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "870366209493755",
+        "recipientPhoneNumber": "+91 7013691121",
+        "textBody": "=Your custom payment link is ready.!👇\n\n{{ $json.Payee }}&am={{ $json.messages[0].text.body }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        784
+      ],
+      "id": "b5b1e7b9-234e-47bc-b665-dee458f33d89",
+      "name": "Sends custom payment link",
+      "webhookId": "d4c0aadd-bfac-4581-82c9-24840d840d69",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "q4azUTbXMzA1jdij",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Checks Incoming messages": {
+      "main": [
+        [
+          {
+            "node": "Detects if it is photo or text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detects if it is photo or text": {
+      "main": [
+        [
+          {
+            "node": "Grabs photo url from file id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets previously stored link ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merges link and entered amount",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grabs photo url from file id": {
+      "main": [
+        [
+          {
+            "node": "Pulls the binary file from url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pulls the binary file from url": {
+      "main": [
+        [
+          {
+            "node": "Decodes QR code in defined format and rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decodes QR code in defined format and rules": {
+      "main": [
+        [
+          {
+            "node": "Cleans the data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleans the data": {
+      "main": [
+        [
+          {
+            "node": "Sends direct payment link",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stores link data in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets previously stored link ": {
+      "main": [
+        [
+          {
+            "node": "Merges link and entered amount",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merges link and entered amount": {
+      "main": [
+        [
+          {
+            "node": "Sends custom payment link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "758cec01-734b-4dd1-a0d6-2dae48b42cdf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "10b66986b1d846fb53601d0ae412e7dd2404714bee9930993b8360995658001c"
+  },
+  "id": "rIT3jM0IKCJVhuKo",
+  "tags": []
+}
