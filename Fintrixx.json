@@ -1,0 +1,1285 @@
+{
+  "name": "Fintrixx",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "callback_query",
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3392,
+        784
+      ],
+      "id": "9eba5765-79e4-4f69-90e2-93c10e6980ef",
+      "name": "Checks for messages",
+      "webhookId": "7d8360c8-f567-4b73-b502-54cca3e33ee2",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf1523b6-d938-4c2c-8fa1-cef88a5b5308"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0f79672d-e078-41e9-8b6d-7554866570c4",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "^[a-zA-Z]{2,10}(,\\s*[a-zA-Z]{2,10})*$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "608e30e6-ea9f-413c-b404-48e513cdc252",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "^-?\\d*(\\.\\d*)?(,\\s*-?\\d*(\\.\\d*)?)*$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -3088,
+        768
+      ],
+      "id": "024a9ecd-44ec-4b55-95e7-845bfdf92640",
+      "name": "Checks if the input is currencies or price alerts"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e7783f84-a093-4a66-a271-ce8f298aa4d0",
+              "name": "Current_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2544,
+        352
+      ],
+      "id": "cfd5914b-0dd0-404f-a067-6814f1dccbe0",
+      "name": "Extracts user id"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Fintrixx",
+        "returnAll": true,
+        "matchType": "allFilters"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2544,
+        560
+      ],
+      "id": "5068187a-d231-4691-9ef8-fcc245d07129",
+      "name": "Gets existing user data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f790989e-5f24-46d7-b078-256d91f099db",
+              "name": "Existing_ids",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2304,
+        560
+      ],
+      "id": "fde988c7-56e9-4fec-aa1f-710aeed80768",
+      "name": "Extracts their user ids"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2064,
+        544
+      ],
+      "id": "47b247cf-68b5-4da1-99dd-a599c2d2d51a",
+      "name": "Merges current and existing users ids"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a67dbb51-7b2c-4763-81c1-e3e6a0fa0b1e",
+              "leftValue": "={{ $json.match }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1632,
+        544
+      ],
+      "id": "d565276b-bf1a-4593-9131-4f6661766391",
+      "name": "Compares if the user is existing1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all incoming items from Merge node\nconst items = $input.all();\n\n// Extract current_id (first item that contains it)\nconst currentItem = items.find(i => i.json[\"Current_id\"] !== undefined);\nconst currentId = currentItem ? currentItem.json[\"Current_id\"] : null;\n\n// Collect all Existing_ids values\nconst existingIds = items\n  .map(i => i.json[\"Existing_ids\"])\n  .filter(v => v !== undefined);\n\n// Check if match exists\nconst match = existingIds.includes(currentId);\n\n// Return result\nreturn [\n  {\n    json: {\n      match: match ? \"yes\" : \"no\",\n      current_id: currentId\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1840,
+        544
+      ],
+      "id": "5f0b6b3b-56c7-49cc-b2be-4bdc8b101a44",
+      "name": "Checks if the data matches"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.current_id }}",
+        "text": "🙌 You’re already registered!\n\n📩 I’ll continue sending updates based on your earlier settings.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        352
+      ],
+      "id": "8224d367-3fff-45b7-ad0c-b8fd596e6aec",
+      "name": "Confirms the user is registered already",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.current_id }}",
+        "text": "👋 Welcome to Fintrixx!\nLet’s set up your personal crypto assistant for live prices and price alerts.\n\n💰 Enter your currencies (ticker symbols only), separated by commas.\nFor example: BTC, ETH, SOL",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        560
+      ],
+      "id": "a94bac1b-2efc-4884-924f-0b18b73006f0",
+      "name": "Asks to setup account by entering currencies",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "Fintrixx",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.result.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        560
+      ],
+      "id": "447196fc-2798-421b-bfb6-ece3ace398cd",
+      "name": "Creates new user entry in database",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Fintrixx",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2528,
+        896
+      ],
+      "id": "a6d74b4c-d2b7-49aa-86dd-70265477c0af",
+      "name": "Gets existing user data1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Fintrixx",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2528,
+        1296
+      ],
+      "id": "eaed0b99-a480-47e0-b3c7-995b9fcc8cf3",
+      "name": "Gets existing user data2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2272,
+        784
+      ],
+      "id": "09e9caee-0562-4b00-a4bd-355c8674d7c3",
+      "name": "Merges existing data and entered currencies"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Fintrixx",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "={{ $json.message.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2048,
+        784
+      ],
+      "id": "70ec84ab-4b3e-4fdc-b0c8-d2ac3b916d49",
+      "name": "updates their respective row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.id }}",
+        "text": "🔔 Enter your alert prices (in USD, without any symbols or names) in the same order as your coins.\nExample: 50000, 3000, 120",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1824,
+        784
+      ],
+      "id": "11a2f10a-c679-48ab-b0f0-0aad5440d98e",
+      "name": "Asks to enter price alert values",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2272,
+        1152
+      ],
+      "id": "5e6e45e1-aec9-4c82-9fa9-e29400a8258e",
+      "name": "Merges existing data and entered price alert values"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Fintrixx",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "={{ $json.currency }}"
+            },
+            {
+              "fieldId": "alert",
+              "fieldValue": "={{ $json.message.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2016,
+        1152
+      ],
+      "id": "4b35faa4-c3c2-4c9d-b947-3e8191287e59",
+      "name": "updates their respective row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.id }}",
+        "text": "🎉 Setup complete!\nYou'll now get daily price updates and alert notifications.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1808,
+        1152
+      ],
+      "id": "5e302e97-9835-40cb-834c-3a04f21a0a1f",
+      "name": "Confirms successful setup",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3408,
+        1824
+      ],
+      "id": "651e6675-d7c9-4a69-9fd5-6c2f5d30d9e2",
+      "name": "Triggers for every 6 hours"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Fintrixx",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -3168,
+        1824
+      ],
+      "id": "55729139-273a-43df-add0-b9e38f28e100",
+      "name": "Gets existing user data3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2928,
+        1824
+      ],
+      "id": "bc1d10bd-52e7-417b-b526-2c51c93686a4",
+      "name": "Loops over all users"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Mapping table of 50+ crypto tickers ---\nconst map = {\n  btc: \"bitcoin\",\n  eth: \"ethereum\",\n  usdt: \"tether\",\n  usdc: \"usdcoin\",\n  bnb: \"binancecoin\",\n  xrp: \"ripple\",\n  sol: \"solana\",\n  ada: \"cardano\",\n  doge: \"dogecoin\",\n  ton: \"toncoin\",\n  trx: \"tron\",\n  link: \"chainlink\",\n  dot: \"polkadot\",\n  matic: \"polygon\",\n  avax: \"avalanche\",\n  shib: \"shiba-inu\",\n  ltc: \"litecoin\",\n  dai: \"dai\",\n  wbtc: \"wrapped-bitcoin\",\n  bch: \"bitcoin-cash\",\n  xlm: \"stellar\",\n  uni: \"uniswap\",\n  okb: \"okb\",\n  atom: \"cosmos\",\n  hbar: \"hedera\",\n  vet: \"vechain\",\n  fil: \"filecoin\",\n  egld: \"multiversx\",\n  apt: \"aptos\",\n  stx: \"stacks\",\n  arb: \"arbitrum\",\n  op: \"optimism\",\n  near: \"near-protocol\",\n  grt: \"the-graph\",\n  algo: \"algorand\",\n  qnt: \"quant\",\n  cro: \"crypto-com-coin\",\n  gala: \"gala\",\n  icp: \"internet-computer\",\n  xtz: \"tezos\",\n  ape: \"apecoin\",\n  sand: \"the-sandbox\",\n  mana: \"decentraland\",\n  eos: \"eos\",\n  aave: \"aave\",\n  ftm: \"fantom\",\n  rune: \"thorchain\",\n  kava: \"kava\",\n  imx: \"immutable\",\n  inj: \"injective\",\n  sei: \"sei\",\n  mina: \"mina\",\n  ldo: \"lido-dao\",\n  sush: \"sushiswap\",\n  chz: \"chiliz\",\n  enj: \"enjincoin\"\n};\n\n\n// --- Get input from previous node (n8n) ---\nconst input = $input.first().json.currency;\n\n\n// --- Split tickers ---\nconst tickers = input.split(\",\");\n\n\n// --- Convert tickers to full names ---\nconst fullNames = tickers.map(t => {\n  const key = t.trim().toLowerCase();\n  return map[key] || key;  // fallback to original if not mapped\n});\n\n\n// --- Return in proper n8n format ---\nreturn [\n  {\n    json: {\n      full: fullNames.join(\",\"),\n      user_id:$input.first().json.id\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2656,
+        1840
+      ],
+      "id": "c99dcdf0-1f5b-4a6a-93b9-ba5a7a055bd3",
+      "name": "Converts input ticker names to full names"
+    },
+    {
+      "parameters": {
+        "url": "https://api.coingecko.com/api/v3/simple/price",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ids",
+              "value": "={{ $json.full }}"
+            },
+            {
+              "name": "vs_currencies",
+              "value": "usd,inr"
+            },
+            {
+              "name": "include_24hr_change",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2416,
+        1728
+      ],
+      "id": "4f5cf8c5-0d56-46a4-b68c-87655e9bb836",
+      "name": "Gets live prices from CoinGecko "
+    },
+    {
+      "parameters": {
+        "jsCode": "// -----------------------------\n// Full name lookup table\n// -----------------------------\nconst nameMap = {\n  btc: \"bitcoin\",\n  eth: \"ethereum\",\n  usdt: \"tether\",\n  usdc: \"usdcoin\",\n  bnb: \"binancecoin\",\n  xrp: \"ripple\",\n  sol: \"solana\",\n  ada: \"cardano\",\n  doge: \"dogecoin\",\n  ton: \"toncoin\",\n  trx: \"tron\",\n  link: \"chainlink\",\n  dot: \"polkadot\",\n  matic: \"polygon\",\n  avax: \"avalanche\",\n  shib: \"shiba-inu\",\n  ltc: \"litecoin\",\n  dai: \"dai\",\n  wbtc: \"wrapped-bitcoin\",\n  bch: \"bitcoin-cash\",\n  xlm: \"stellar\",\n  uni: \"uniswap\",\n  okb: \"okb\",\n  atom: \"cosmos\",\n  hbar: \"hedera\",\n  vet: \"vechain\",\n  fil: \"filecoin\",\n  egld: \"multiversx\",\n  apt: \"aptos\",\n  stx: \"stacks\",\n  arb: \"arbitrum\",\n  op: \"optimism\",\n  near: \"near-protocol\",\n  grt: \"the-graph\",\n  algo: \"algorand\",\n  qnt: \"quant\",\n  cro: \"crypto-com-coin\",\n  gala: \"gala\",\n  icp: \"internet-computer\",\n  xtz: \"tezos\",\n  ape: \"apecoin\",\n  sand: \"the-sandbox\",\n  mana: \"decentraland\",\n  eos: \"eos\",\n  aave: \"aave\",\n  ftm: \"fantom\",\n  rune: \"thorchain\",\n  kava: \"kava\",\n  imx: \"immutable\",\n  inj: \"injective\",\n  sei: \"sei\",\n  mina: \"mina\",\n  ldo: \"lido-dao\",\n  sush: \"sushiswap\",\n  chz: \"chiliz\",\n  enj: \"enjincoin\"\n};\n\n// Build reverse map: full name → ticker\nconst reverseMap = {};\nfor (const t in nameMap) {\n  reverseMap[nameMap[t]] = t.toUpperCase();\n}\n\n// Get API data\nconst data = $input.first().json;\n\n// Number formatter (commas + 2 decimals)\nfunction formatNumber(value) {\n  if (value === null || value === undefined || isNaN(value)) return value;\n  const trimmed = Number(value).toFixed(2);   // ← CHANGED FROM 3 TO 2\n  return Number(trimmed).toLocaleString(\"en-US\", {\n    minimumFractionDigits: 0,\n    maximumFractionDigits: 2             // ← CHANGED FROM 3 TO 2\n  });\n}\n\nlet formattedText = \"\";\n\n// Build final formatted output\nfor (const coin in data) {\n  const d = data[coin];\n\n  const name = coin.toUpperCase();\n  const ticker = reverseMap[coin] || name;\n\n  formattedText +=\n`\\n${name} (${ticker})\n-------------------------\n$${formatNumber(d.usd)}\n₹${formatNumber(d.inr)}\n24h Change: ${formatNumber(d.usd_24h_change)}%\n\n`;\n}\n\n// Final output\nreturn [\n  {\n    json: {\n      formatted_output: formattedText.trim()\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2208,
+        1728
+      ],
+      "id": "2d114904-4e31-4531-9650-6bbd60b3734d",
+      "name": "Structures output as a clean message"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1968,
+        1824
+      ],
+      "id": "934ee95c-cf7c-4188-a679-ed072e3bd61b",
+      "name": "Merges user id and live price data"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.user_id }}",
+        "text": "=⚡ Live prices\n\n{{ $json.formatted_output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1728,
+        1824
+      ],
+      "id": "2e8d373f-46c8-4962-904a-c85e263e9843",
+      "name": "Sends live price for preset currencies",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3424,
+        2448
+      ],
+      "id": "ac34f40e-daaf-44c3-97c2-217d6f6f41ce",
+      "name": "Triggers for every minute"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Fintrixx",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -3216,
+        2448
+      ],
+      "id": "7a44db4f-61de-4d1c-85d7-8d940e6709f9",
+      "name": "Gets existing user data4",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -2960,
+        2448
+      ],
+      "id": "cbea4c42-9c8c-44af-95d7-bbc0599b9ecc",
+      "name": "Loops over all users1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Mapping table of 50+ crypto tickers ---\nconst map = {\n  btc: \"bitcoin\",\n  eth: \"ethereum\",\n  usdt: \"tether\",\n  usdc: \"usdcoin\",\n  bnb: \"binancecoin\",\n  xrp: \"ripple\",\n  sol: \"solana\",\n  ada: \"cardano\",\n  doge: \"dogecoin\",\n  ton: \"toncoin\",\n  trx: \"tron\",\n  link: \"chainlink\",\n  dot: \"polkadot\",\n  matic: \"polygon\",\n  avax: \"avalanche\",\n  shib: \"shiba-inu\",\n  ltc: \"litecoin\",\n  dai: \"dai\",\n  wbtc: \"wrapped-bitcoin\",\n  bch: \"bitcoin-cash\",\n  xlm: \"stellar\",\n  uni: \"uniswap\",\n  okb: \"okb\",\n  atom: \"cosmos\",\n  hbar: \"hedera\",\n  vet: \"vechain\",\n  fil: \"filecoin\",\n  egld: \"multiversx\",\n  apt: \"aptos\",\n  stx: \"stacks\",\n  arb: \"arbitrum\",\n  op: \"optimism\",\n  near: \"near-protocol\",\n  grt: \"the-graph\",\n  algo: \"algorand\",\n  qnt: \"quant\",\n  cro: \"crypto-com-coin\",\n  gala: \"gala\",\n  icp: \"internet-computer\",\n  xtz: \"tezos\",\n  ape: \"apecoin\",\n  sand: \"the-sandbox\",\n  mana: \"decentraland\",\n  eos: \"eos\",\n  aave: \"aave\",\n  ftm: \"fantom\",\n  rune: \"thorchain\",\n  kava: \"kava\",\n  imx: \"immutable\",\n  inj: \"injective\",\n  sei: \"sei\",\n  mina: \"mina\",\n  ldo: \"lido-dao\",\n  sush: \"sushiswap\",\n  chz: \"chiliz\",\n  enj: \"enjincoin\"\n};\n\n// Get the full row\nconst row = $input.first().json;\n\n// Read dynamic values\nconst currencyInput = row.currency || \"\";\nconst alertInput = row.alert || \"\";\n \n\n// Convert tickers to full names dynamically\nconst fullNames = currencyInput\n  .split(\",\")\n  .map(v => v.trim().toLowerCase())\n  .filter(v => v !== \"\")\n  .map(key => map[key] || key);\n\n// Return result\nreturn [\n  {\n    json: {\n      full: fullNames.join(\",\"),\n      alert: alertInput,   // unchanged, dynamic length\n      user_id: $input.first().json.id\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2672,
+        2464
+      ],
+      "id": "bc0d920f-b38c-4c10-b68c-a9a518239315",
+      "name": "Converts input ticker names to full names1"
+    },
+    {
+      "parameters": {
+        "url": "https://api.coingecko.com/api/v3/simple/price",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ids",
+              "value": "={{ $json.full }}"
+            },
+            {
+              "name": "vs_currencies",
+              "value": "usd,inr"
+            },
+            {
+              "name": "include_24hr_change",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2416,
+        2304
+      ],
+      "id": "5e72a2eb-53ad-4d4d-8e75-41d0bb7743e9",
+      "name": "Gets live prices from CoinGecko 1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2128,
+        2448
+      ],
+      "id": "97bb464d-4483-4367-8192-e9ed9aa6ff6e",
+      "name": "Merges user id and live price data1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Get input JSON ---\nconst data = $input.first().json;\n\n// -----------------------------\n// Full name lookup table\n// -----------------------------\nconst nameMap = {\n  btc: \"bitcoin\",\n  eth: \"ethereum\",\n  usdt: \"tether\",\n  usdc: \"usdcoin\",\n  bnb: \"binancecoin\",\n  xrp: \"ripple\",\n  sol: \"solana\",\n  ada: \"cardano\",\n  doge: \"dogecoin\",\n  ton: \"toncoin\",\n  trx: \"tron\",\n  link: \"chainlink\",\n  dot: \"polkadot\",\n  matic: \"polygon\",\n  avax: \"avalanche\",\n  shib: \"shiba-inu\",\n  ltc: \"litecoin\",\n  dai: \"dai\",\n  wbtc: \"wrapped-bitcoin\",\n  bch: \"bitcoin-cash\",\n  xlm: \"stellar\",\n  uni: \"uniswap\",\n  okb: \"okb\",\n  atom: \"cosmos\",\n  hbar: \"hedera\",\n  vet: \"vechain\",\n  fil: \"filecoin\",\n  egld: \"multiversx\",\n  apt: \"aptos\",\n  stx: \"stacks\",\n  arb: \"arbitrum\",\n  op: \"optimism\",\n  near: \"near-protocol\",\n  grt: \"the-graph\",\n  algo: \"algorand\",\n  qnt: \"quant\",\n  cro: \"crypto-com-coin\",\n  gala: \"gala\",\n  icp: \"internet-computer\",\n  xtz: \"tezos\",\n  ape: \"apecoin\",\n  sand: \"the-sandbox\",\n  mana: \"decentraland\",\n  eos: \"eos\",\n  aave: \"aave\",\n  ftm: \"fantom\",\n  rune: \"thorchain\",\n  kava: \"kava\",\n  imx: \"immutable\",\n  inj: \"injective\",\n  sei: \"sei\",\n  mina: \"mina\",\n  ldo: \"lido-dao\",\n  sush: \"sushiswap\",\n  chz: \"chiliz\",\n  enj: \"enjincoin\"\n};\n\n// -----------------------------\n// Reverse map: full name → ticker\n// -----------------------------\nconst tickerMap = {};\nfor (const ticker in nameMap) {\n  tickerMap[nameMap[ticker]] = ticker.toUpperCase();\n}\n\n// Extract data\nconst fullNames = data.full.split(\",\").map(v => v.trim());\nconst alertPrices = data.alert.split(\",\").map(v => Number(v.trim()));\n\n// Prepare results\nlet matched = [];\nlet anyMatch = false;\n\n// Loop dynamically through currencies\nfullNames.forEach((name, index) => {\n    const key = name.toLowerCase();\n    const coin = data[key];\n\n    if (!coin || !coin.usd) return;\n\n    const livePrice = Number(coin.usd);\n    const alertPrice = alertPrices[index];\n\n    // ---- MATCH LOGIC ----\n    if (livePrice >= alertPrice) {\n        anyMatch = true;\n\n        // Format live price to 2 decimals for output ONLY\n        const formattedPrice = livePrice.toFixed(2);\n\n        // Get ticker (BTC, ETH…)\n        const ticker = tickerMap[key] || \"\";\n\n        matched.push(`${name.charAt(0).toUpperCase() + name.slice(1)} (${ticker}) = $${formattedPrice}`);\n    }\n});\n\n// Final output\nreturn [\n  {\n    json: {\n      match: anyMatch ? \"yes\" : \"no\",\n      currencies: matched.join(\"\\n\"),\n      user_id: data.user_id\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        2448
+      ],
+      "id": "79d04509-622c-4241-819b-2473074e7173",
+      "name": "Compares if live price and alert price matches or exceeds"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0d0ca675-9b50-4d8f-bd77-2e8aeaaa3f6c",
+              "leftValue": "={{ $json.match }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1600,
+        2448
+      ],
+      "id": "52ba837b-219d-4f26-b5fe-fb28c6bbf10e",
+      "name": "Checks if macthes"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.user_id }}",
+        "text": "=🚨 Price Alert!\n\n{{ $json.currencies }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        2432
+      ],
+      "id": "9e29715e-9618-4401-a907-804f8bbe50d9",
+      "name": "Sends price alert with currency name price",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "GWegPwbvqhdI8wVC",
+          "name": "Fintrixx"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Checks for messages": {
+      "main": [
+        [
+          {
+            "node": "Checks if the input is currencies or price alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks if the input is currencies or price alerts": {
+      "main": [
+        [
+          {
+            "node": "Extracts user id",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gets existing user data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets existing user data1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merges existing data and entered currencies",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets existing user data2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merges existing data and entered price alert values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracts user id": {
+      "main": [
+        [
+          {
+            "node": "Merges current and existing users ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets existing user data": {
+      "main": [
+        [
+          {
+            "node": "Extracts their user ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracts their user ids": {
+      "main": [
+        [
+          {
+            "node": "Merges current and existing users ids",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merges current and existing users ids": {
+      "main": [
+        [
+          {
+            "node": "Checks if the data matches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compares if the user is existing1": {
+      "main": [
+        [
+          {
+            "node": "Confirms the user is registered already",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Asks to setup account by entering currencies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks if the data matches": {
+      "main": [
+        [
+          {
+            "node": "Compares if the user is existing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asks to setup account by entering currencies": {
+      "main": [
+        [
+          {
+            "node": "Creates new user entry in database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creates new user entry in database": {
+      "main": [
+        []
+      ]
+    },
+    "Gets existing user data1": {
+      "main": [
+        [
+          {
+            "node": "Merges existing data and entered currencies",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Gets existing user data2": {
+      "main": [
+        [
+          {
+            "node": "Merges existing data and entered price alert values",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merges existing data and entered currencies": {
+      "main": [
+        [
+          {
+            "node": "updates their respective row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "updates their respective row": {
+      "main": [
+        [
+          {
+            "node": "Asks to enter price alert values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges existing data and entered price alert values": {
+      "main": [
+        [
+          {
+            "node": "updates their respective row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "updates their respective row1": {
+      "main": [
+        [
+          {
+            "node": "Confirms successful setup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triggers for every 6 hours": {
+      "main": [
+        [
+          {
+            "node": "Gets existing user data3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets existing user data3": {
+      "main": [
+        [
+          {
+            "node": "Loops over all users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loops over all users": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Converts input ticker names to full names",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converts input ticker names to full names": {
+      "main": [
+        [
+          {
+            "node": "Gets live prices from CoinGecko ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merges user id and live price data",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Loops over all users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets live prices from CoinGecko ": {
+      "main": [
+        [
+          {
+            "node": "Structures output as a clean message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structures output as a clean message": {
+      "main": [
+        [
+          {
+            "node": "Merges user id and live price data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges user id and live price data": {
+      "main": [
+        [
+          {
+            "node": "Sends live price for preset currencies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sends live price for preset currencies": {
+      "main": [
+        []
+      ]
+    },
+    "Triggers for every minute": {
+      "main": [
+        [
+          {
+            "node": "Gets existing user data4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets existing user data4": {
+      "main": [
+        [
+          {
+            "node": "Loops over all users1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loops over all users1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Converts input ticker names to full names1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converts input ticker names to full names1": {
+      "main": [
+        [
+          {
+            "node": "Merges user id and live price data1",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Gets live prices from CoinGecko 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loops over all users1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets live prices from CoinGecko 1": {
+      "main": [
+        [
+          {
+            "node": "Merges user id and live price data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges user id and live price data1": {
+      "main": [
+        [
+          {
+            "node": "Compares if live price and alert price matches or exceeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compares if live price and alert price matches or exceeds": {
+      "main": [
+        [
+          {
+            "node": "Checks if macthes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks if macthes": {
+      "main": [
+        [
+          {
+            "node": "Sends price alert with currency name price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a1581e0f-aa5d-44fc-9753-7d2ce3884d19",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "10b66986b1d846fb53601d0ae412e7dd2404714bee9930993b8360995658001c"
+  },
+  "id": "Usyon3SCNPVpwC7R",
+  "tags": []
+}
