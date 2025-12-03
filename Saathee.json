@@ -1,0 +1,1518 @@
+{
+  "name": "Saathee",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "callback_query",
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        2176,
+        -2720
+      ],
+      "id": "32a3672d-c4a0-46cd-b768-d4331b7067e7",
+      "name": "Checks for messages",
+      "webhookId": "7d8360c8-f567-4b73-b502-54cca3e33ee2",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf1523b6-d938-4c2c-8fa1-cef88a5b5308"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0f79672d-e078-41e9-8b6d-7554866570c4",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "^-?\\d*\\.?\\d+$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6442bc40-a38f-4d15-a118-f77d37954481",
+                    "leftValue": "={{ $json.message.location }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2480,
+        -2736
+      ],
+      "id": "ec4b29a7-bb3c-4e1a-9000-b5737d122fca",
+      "name": "Condition checks for new/existing user, time interval and location"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e7783f84-a093-4a66-a271-ce8f298aa4d0",
+              "name": "Current_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3072,
+        -3232
+      ],
+      "id": "a66a53b4-1c1f-42a7-94e3-07add29af5a7",
+      "name": "Extracts user id"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Saathee",
+        "returnAll": true,
+        "matchType": "allFilters"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        -3040
+      ],
+      "id": "84dc1d83-0918-4580-8be0-c47b36ba3bc1",
+      "name": "Gets existing users data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f790989e-5f24-46d7-b078-256d91f099db",
+              "name": "Existing_ids",
+              "value": "={{ $json[\"User Id\"] }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3312,
+        -3040
+      ],
+      "id": "59551c8d-c263-4903-9624-f79936306761",
+      "name": "Extracts user ids"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3552,
+        -3056
+      ],
+      "id": "960898d0-6870-40d4-9a49-17f01afbd88e",
+      "name": "Merges existing and current user ids"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all incoming items from Merge node\nconst items = $input.all();\n\n// Extract current_id (first item that contains it)\nconst currentItem = items.find(i => i.json[\"Current_id\"] !== undefined);\nconst currentId = currentItem ? currentItem.json[\"Current_id\"] : null;\n\n// Collect all Existing_ids values\nconst existingIds = items\n  .map(i => i.json[\"Existing_ids\"])\n  .filter(v => v !== undefined);\n\n// Check if match exists\nconst match = existingIds.includes(currentId);\n\n// Return result\nreturn [\n  {\n    json: {\n      match: match ? \"yes\" : \"no\",\n      current_id: currentId\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3776,
+        -3056
+      ],
+      "id": "57e8572d-72b7-4e5d-93e9-010c8432aac3",
+      "name": "Checks if the current id matching with any of existing ids"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a67dbb51-7b2c-4763-81c1-e3e6a0fa0b1e",
+              "leftValue": "={{ $json.match }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3984,
+        -3056
+      ],
+      "id": "fe2a2888-7f1b-43b1-817f-84a381eed699",
+      "name": "Checks if the user already exists"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.current_id }}",
+        "text": "👋 Welcome back to Saathee.!\n\nEnter the time for your safety check (in minutes).",
+        "replyMarkup": "inlineKeyboard",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4336,
+        -3280
+      ],
+      "id": "8b611121-a2f0-4b6f-9d15-a9d4f0de57af",
+      "name": "Asks to share time interval for safety check",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.current_id }}",
+        "text": "=🎉 Welcome to Saathee!\n\nLet’s get your account ready.\n\nFill out the setup form below:\nhttps://johnmail.app.n8n.cloud/form/a927a8b3-c2e2-4edc-bd7b-d577612efd49\n\nCopy your User ID below👇",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4336,
+        -3040
+      ],
+      "id": "935fdad2-2c75-4cb5-94b4-36cef36645b2",
+      "name": "Asks to register",
+      "webhookId": "2a54a1e0-463c-486b-adf3-a3b13367b849",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.current_id }}",
+        "text": "={{ $json.current_id }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4336,
+        -2848
+      ],
+      "id": "e264cdce-0ffe-47f0-99be-aa57dec8145f",
+      "name": "Shares their user id to copy",
+      "webhookId": "2a54a1e0-463c-486b-adf3-a3b13367b849",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Saathee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User Id",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        -2816
+      ],
+      "id": "909346ce-1e4d-4618-8fad-a96802913e85",
+      "name": "Gets existing users data1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3440,
+        -2736
+      ],
+      "id": "e8f62b46-de1e-4255-962a-e82b2eb043b7",
+      "name": "Merges existing data and time interval figure"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Saathee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User Id",
+              "condition": "eq",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "User Id",
+              "fieldValue": "={{ $json[\"User Id\"] }}"
+            },
+            {
+              "fieldId": "Name",
+              "fieldValue": "={{ $json.Name }}"
+            },
+            {
+              "fieldId": "EC-1",
+              "fieldValue": "={{ $json[\"EC-1\"] }}"
+            },
+            {
+              "fieldId": "EC-2",
+              "fieldValue": "={{ $json[\"EC-2\"] }}"
+            },
+            {
+              "fieldId": "EC-3",
+              "fieldValue": "={{ $json[\"EC-3\"] }}"
+            },
+            {
+              "fieldId": "Track time",
+              "fieldValue": "={{ $json.message.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3712,
+        -2736
+      ],
+      "id": "7d63ce14-38fa-44cc-88c2-61ba0207ef79",
+      "name": "Updates the row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"User Id\"] }}",
+        "text": "=📍 Please share your location.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3968,
+        -2736
+      ],
+      "id": "4da8e2f4-1a33-4217-8a13-04402cefb775",
+      "name": "Asks to share location",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Saathee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User Id",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3088,
+        -2608
+      ],
+      "id": "21fae977-6653-4ab7-8ac9-9a40d82044d5",
+      "name": "Gets existing users data2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3408,
+        -2464
+      ],
+      "id": "c31dc37c-b24e-4e03-a9e4-85171454be82",
+      "name": "Merges existing data and location data"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Saathee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User Id",
+              "condition": "eq",
+              "keyValue": "={{ $json[\"User Id\"] }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "User Id",
+              "fieldValue": "={{ $json[\"User Id\"] }}"
+            },
+            {
+              "fieldId": "Name",
+              "fieldValue": "={{ $json.Name }}"
+            },
+            {
+              "fieldId": "EC-1",
+              "fieldValue": "={{ $json[\"EC-1\"] }}"
+            },
+            {
+              "fieldId": "EC-2",
+              "fieldValue": "={{ $json[\"EC-2\"] }}"
+            },
+            {
+              "fieldId": "EC-3",
+              "fieldValue": "={{ $json[\"EC-3\"] }}"
+            },
+            {
+              "fieldId": "Track time",
+              "fieldValue": "={{ $json[\"Track time\"] }}"
+            },
+            {
+              "fieldId": "Location",
+              "fieldValue": "=https://www.google.com/maps?q={{ $json.message.location.latitude }},{{ $json.message.location.longitude }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3632,
+        -2464
+      ],
+      "id": "c5d93536-15b9-4a5f-bc49-80dc5ada6836",
+      "name": "Updates the row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"User Id\"] }}",
+        "text": "=You’re good to go! 🛵 \n\nSaathee will check on you in {{ $json[\"Track time\"] }} minutes.\n\nStay confident and safe out there.👍",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3888,
+        -2464
+      ],
+      "id": "d30be90a-1c25-4fb6-8f37-4c0b76d99f5b",
+      "name": "Confirms that agent is started working",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Saathee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User Id",
+              "keyValue": "={{ $json.result.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        -2144
+      ],
+      "id": "25f5728d-325f-4cfb-a76e-d922351a25b4",
+      "name": "Gets existing users data3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json[\"Track time\"] }}",
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2416,
+        -2144
+      ],
+      "id": "15667dfe-96c3-4675-aad3-e9ab2381edd4",
+      "name": "Holds the flow for set time",
+      "webhookId": "8c6a9ed3-4d0d-451b-b23d-fef706832f1f"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $json[\"User Id\"] }}",
+        "message": "🛡️ Just checking in..\n\nAre you safe?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ I’m safe",
+            "disapproveLabel": "❌ I'm not safe"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 5,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2736,
+        -2144
+      ],
+      "id": "42408fd1-bace-42d1-a006-bfc9ede979d2",
+      "name": "First safety check",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d6e3f9da-463e-4eb4-8243-2d82e29a9da6",
+                    "leftValue": "={{ $json.data.approved }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.approved }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "3732123d-925a-448c-96ae-5c24bbc2fc44"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c048f6b8-cfef-4b51-9068-51827567f3b1",
+                    "leftValue": "={{ $json.data.approved }}",
+                    "rightValue": "safe_no",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        3008,
+        -2160
+      ],
+      "id": "6e23560e-ea7d-4c14-bcc9-1113fe8237f8",
+      "name": "Checks condition for user response"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $json[\"User Id\"] }}",
+        "message": "⚠️ You haven't responded yet.\n\nAre you safe?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ I’m safe",
+            "disapproveLabel": "❌ I'm not safe"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 5,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3392,
+        -2176
+      ],
+      "id": "07b2d7a1-c75f-4cf1-83ee-95f1efd583b1",
+      "name": "Second safety check",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d6e3f9da-463e-4eb4-8243-2d82e29a9da6",
+                    "leftValue": "={{ $json.data.approved }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.approved }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "3732123d-925a-448c-96ae-5c24bbc2fc44"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c048f6b8-cfef-4b51-9068-51827567f3b1",
+                    "leftValue": "={{ $json.data.approved }}",
+                    "rightValue": "safe_no",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        3776,
+        -2192
+      ],
+      "id": "47a13fd8-8aa7-4b98-a170-c9a644adf290",
+      "name": "Checks condition for user response1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2992,
+        -1760
+      ],
+      "id": "9d42e82b-612d-4d62-b75f-6fd08351084e",
+      "name": "Merges response case and user id"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"User Id\"] }}",
+        "text": "=🎉 Awesome! Happy that you’re safe!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3184,
+        -1760
+      ],
+      "id": "7cc847d2-3a7c-433e-bc23-b64bc6adde3f",
+      "name": "Conclusion message for 'I'm safe' response",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3488,
+        -1840
+      ],
+      "id": "16d5f379-e8f1-4f14-a050-e566eecdc1de",
+      "name": "Merges response case and user id1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Saathee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User Id",
+              "keyValue": "={{ $json[\"User Id\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3728,
+        -1840
+      ],
+      "id": "c18cc072-8fef-44ca-b6d9-a7534d7a76c1",
+      "name": "Gets their respective data row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"EC-1\"] }}",
+        "text": "=🚨 Hurry! {{ $json.Name }} is in danger.\n📍 Last known location: {{ $json.Location }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4032,
+        -1840
+      ],
+      "id": "8b471e6e-78f8-44ee-8edf-97bf9da556e7",
+      "name": "Alert for contact 1",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"EC-2\"] }}",
+        "text": "=🚨 Hurry! {{ $json.Name }} is in danger.\n📍 Last known location: {{ $json.Location }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4032,
+        -1632
+      ],
+      "id": "6e5b88a9-48c7-4ec2-bc36-daa26e7bf2b3",
+      "name": "Alert for contact 2",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"EC-3\"] }}",
+        "text": "=🚨 Hurry! {{ $json.Name }} is in danger.\n📍 Last known location: {{ $json.Location }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4032,
+        -1408
+      ],
+      "id": "f120946d-a4d0-4162-a328-3e2f8028bb82",
+      "name": "Alert for contact 3",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Setting up Saathee",
+        "formDescription": "Fill the details below to setup your account",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Your Telegram user id",
+              "placeholder": "Copy from chat"
+            },
+            {
+              "fieldLabel": "Your name",
+              "placeholder": "Eg: Naira"
+            },
+            {
+              "fieldLabel": "Your Emergency contact-1",
+              "placeholder": "Telegram user id | Eg: 7656834354"
+            },
+            {
+              "fieldLabel": "Your Emergency contact-2",
+              "placeholder": "Telegram user id | Eg: 7656834354"
+            },
+            {
+              "fieldLabel": "Your Emergency contact-3",
+              "placeholder": "Telegram user id | Eg: 7656834354"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        2160,
+        -1408
+      ],
+      "id": "e0e7535a-7ac8-430b-b174-5a51703479b6",
+      "name": "Form to setup agent",
+      "webhookId": "a927a8b3-c2e2-4edc-bd7b-d577612efd49"
+    },
+    {
+      "parameters": {
+        "tableId": "Saathee",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "User Id",
+              "fieldValue": "={{ $json[\"Your Telegram user id\"] }}"
+            },
+            {
+              "fieldId": "Name",
+              "fieldValue": "={{ $json[\"Your name\"] }}"
+            },
+            {
+              "fieldId": "EC-1",
+              "fieldValue": "={{ $json[\"Your Emergency contact-1\"] }}"
+            },
+            {
+              "fieldId": "EC-2",
+              "fieldValue": "={{ $json[\"Your Emergency contact-2\"] }}"
+            },
+            {
+              "fieldId": "EC-3",
+              "fieldValue": "={{ $json[\"Your Emergency contact-3\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2448,
+        -1408
+      ],
+      "id": "9abfe4a8-0768-4b47-9549-e6569a1afbc6",
+      "name": "Stores the user data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "KQZnfAgKUT6UWr5p",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"User Id\"] }}",
+        "text": "=✅ Registration completed!\n\nNote: Share 'Saathee' with your emergency contacts. Bot initiation is required from their end to receive messages.\n\nClick 👉 /start 👈 to use Saathee.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2704,
+        -1408
+      ],
+      "id": "fb3f6c7e-d093-4171-b172-ce9e20826926",
+      "name": "Confirmation for successful registration",
+      "webhookId": "a6c00df0-f967-47d6-b0b6-fbc9648c1e3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "UuBNkV6OYrNXl36H",
+          "name": "Saathee"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Checks for messages": {
+      "main": [
+        [
+          {
+            "node": "Condition checks for new/existing user, time interval and location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Condition checks for new/existing user, time interval and location": {
+      "main": [
+        [
+          {
+            "node": "Extracts user id",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gets existing users data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets existing users data1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merges existing data and time interval figure",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Merges existing data and location data",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Gets existing users data2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracts user id": {
+      "main": [
+        [
+          {
+            "node": "Merges existing and current user ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets existing users data": {
+      "main": [
+        [
+          {
+            "node": "Extracts user ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extracts user ids": {
+      "main": [
+        [
+          {
+            "node": "Merges existing and current user ids",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merges existing and current user ids": {
+      "main": [
+        [
+          {
+            "node": "Checks if the current id matching with any of existing ids",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks if the current id matching with any of existing ids": {
+      "main": [
+        [
+          {
+            "node": "Checks if the user already exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks if the user already exists": {
+      "main": [
+        [
+          {
+            "node": "Asks to share time interval for safety check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Asks to register",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shares their user id to copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets existing users data1": {
+      "main": [
+        [
+          {
+            "node": "Merges existing data and time interval figure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges existing data and time interval figure": {
+      "main": [
+        [
+          {
+            "node": "Updates the row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Updates the row": {
+      "main": [
+        [
+          {
+            "node": "Asks to share location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asks to share location": {
+      "main": [
+        []
+      ]
+    },
+    "Gets existing users data2": {
+      "main": [
+        [
+          {
+            "node": "Merges existing data and location data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges existing data and location data": {
+      "main": [
+        [
+          {
+            "node": "Updates the row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Updates the row1": {
+      "main": [
+        [
+          {
+            "node": "Confirms that agent is started working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirms that agent is started working": {
+      "main": [
+        [
+          {
+            "node": "Gets existing users data3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets existing users data3": {
+      "main": [
+        [
+          {
+            "node": "Holds the flow for set time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Holds the flow for set time": {
+      "main": [
+        [
+          {
+            "node": "First safety check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merges response case and user id",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Merges response case and user id1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "First safety check": {
+      "main": [
+        [
+          {
+            "node": "Checks condition for user response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks condition for user response": {
+      "main": [
+        [
+          {
+            "node": "Second safety check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merges response case and user id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merges response case and user id1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Second safety check": {
+      "main": [
+        [
+          {
+            "node": "Checks condition for user response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checks condition for user response1": {
+      "main": [
+        [
+          {
+            "node": "Merges response case and user id1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merges response case and user id",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merges response case and user id1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges response case and user id": {
+      "main": [
+        [
+          {
+            "node": "Conclusion message for 'I'm safe' response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merges response case and user id1": {
+      "main": [
+        [
+          {
+            "node": "Gets their respective data row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets their respective data row": {
+      "main": [
+        [
+          {
+            "node": "Alert for contact 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Alert for contact 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Alert for contact 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form to setup agent": {
+      "main": [
+        [
+          {
+            "node": "Stores the user data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stores the user data": {
+      "main": [
+        [
+          {
+            "node": "Confirmation for successful registration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b3fab26d-c80a-402e-be5a-c2eabaffe73b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "10b66986b1d846fb53601d0ae412e7dd2404714bee9930993b8360995658001c"
+  },
+  "id": "dvyl9GMVeiv5je4s",
+  "tags": []
+}
